@@ -4,6 +4,8 @@
 
 HelpMe is a powerful terminal-based CLI tool designed to help you accomplish user-defined Linux tasks by automatically generating and executing step-by-step commands. The tool uses advanced LLMs to intelligently generate, validate, and verify each command, ensuring accuracy, safety, and efficiency in completing tasks on the command line.
 
+[Demo Video](https://www.loom.com/share/a79bb41eb3f542ad91d388d41f27bb12?sid=51aa2840-b88a-4fc1-8c0a-09932dde9786)
+
 ## Features
 
 - **Automatic Plan Generation**: Converts user instructions into clear, sequential commands for the Linux terminal, making it easy to accomplish complex tasks.
