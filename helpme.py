@@ -14,10 +14,10 @@ load_dotenv()
 app = typer.Typer()
 
 # Constants
-MODEL = 'llama3.1'
-FORMAT = 'json'
-OPTIONS = {'temperature': 0, 'max_tokens': 100}
-GEMINI_API_KEY=os.getenv('GEMINI_API_KEY')
+MODEL = "llama3.1"
+FORMAT = "json"
+OPTIONS = {"temperature": 0, "max_tokens": 100}
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 generation_config = GenerationConfig(
@@ -25,23 +25,35 @@ generation_config = GenerationConfig(
     top_p=1.0,
     top_k=50,
     max_output_tokens=2048,
-    response_mime_type="application/json"
+    response_mime_type="application/json",
 )
-gemini_model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
+gemini_model = genai.GenerativeModel(
+    "gemini-1.5-flash", generation_config=generation_config
+)
 
 # Initialize the console for rich output
 console = Console()
 
-def call_llm(prompt: str, model=MODEL, format: Literal['', 'json'] = FORMAT, options=OPTIONS, online: bool=False) -> Dict[str, Any]:
+
+def call_llm(
+    prompt: str,
+    model=MODEL,
+    format: Literal["", "json"] = FORMAT,
+    options=OPTIONS,
+    online: bool = False,
+) -> Dict[str, Any]:
     """
     Calls the language model with the provided prompt and returns the parsed JSON response.
     """
     if not online:
-        response = ollama.generate(model=model, prompt=prompt, format=format, options=options)
-        return json.loads(response['response'])
+        response = ollama.generate(
+            model=model, prompt=prompt, format=format, options=options
+        )
+        return json.loads(response["response"])
     else:
         response = gemini_model.generate_content(prompt)
         return json.loads(response.text)
+
 
 def get_planner_prompt(instruction: str, plan: str, feedback: str) -> str:
     """
@@ -51,10 +63,11 @@ def get_planner_prompt(instruction: str, plan: str, feedback: str) -> str:
     You are an AI assistant tasked with generating a detailed, step-by-step plan to accomplish the user's instruction. 
     Break down the instruction into small, actionable steps that are clear and concise. 
     The commands will be executed in a terminal in the same system. 
-    Do not provide commands to "Reboot the system" or "Shutdown the system." Instead, if the instruction is to reboot or shutdown the system, 
-    provide an alert using the 'echo' command and direct the user to reboot or shutdown.
-    There is no need for a step to open the terminal.
-    Each step should logically follow the previous one, ensuring that subsequent commands utilize the outputs of earlier commands where relevant.
+    - Do not provide commands to "Reboot the system" or "Shutdown the system." Instead, if the instruction is to reboot or shutdown the system, 
+      provide an alert using the 'echo' command and direct the user to reboot or shutdown.
+    - There is no need for a step to open the terminal.
+    - Each step should logically follow the previous one, ensuring that subsequent commands utilize the outputs of earlier commands where relevant.
+    - When using `find` command to search for files or directories, ensure that the search is limited to the necessary directories. If the directory is not specified, the search should be limited to the user's home directory.
     
     System: Linux
     User Instruction: {instruction}
@@ -108,6 +121,7 @@ def get_planner_prompt(instruction: str, plan: str, feedback: str) -> str:
     """
     return prompt
 
+
 def get_verifier_prompt(instruction: str, plan: str, feedback: str) -> str:
     """
     Generates a prompt for the language model to verify the generated plan.
@@ -144,15 +158,17 @@ def get_verifier_prompt(instruction: str, plan: str, feedback: str) -> str:
     """
     return prompt
 
+
 def execute_plan(plan: Dict[str, Any]) -> None:
     """
     Executes the commands in the generated plan using the system shell.
     """
-    commands = '; '.join(step['command'] for step in plan['plan'])
+    commands = "; ".join(step["command"] for step in plan["plan"])
     try:
         subprocess.run(commands, shell=True, check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error executing commands: {e}")
+
 
 @app.command()
 def run(instruction: str, online: bool = False):
@@ -162,39 +178,46 @@ def run(instruction: str, online: bool = False):
     feedback: str = ""
     plan = {}
     PLAN_APPROVED = False
-    
+
     while not PLAN_APPROVED:
         # Indicate planning phase
         with console.status("[bold blue]Planning...") as status:
-            plan = call_llm(get_planner_prompt(instruction, json.dumps(plan, indent=4), feedback), online=online)
-            console.print('[bold] Generated Plan:')
-            for i, step in enumerate(plan['plan']):
-                console.print(f'\tStep {i}: ' + step['step'])
-                console.print('\t\tCommand: ' + step['command'])
+            plan = call_llm(
+                get_planner_prompt(instruction, json.dumps(plan, indent=4), feedback),
+                online=online,
+            )
+            console.print("[bold] Generated Plan:")
+            for i, step in enumerate(plan["plan"]):
+                console.print(f"\tStep {i}: " + step["step"])
+                console.print("\t\tCommand: " + step["command"])
 
         # Indicate verification phase
         with console.status("[bold yellow]Verifying...") as status:
-            verify = call_llm(get_verifier_prompt(instruction, json.dumps(plan, indent=4), feedback), online=online)
-            console.print('[bold] Feedback:')
-            for i, step in enumerate(verify['plan']):
-                console.print(f'\tStep {i}: ' + step['step'])
-                console.print('\t\tStatus: ' + step['status'])
-                console.print('\t\tFeedback: ' + step['feedback'])
+            verify = call_llm(
+                get_verifier_prompt(instruction, json.dumps(plan, indent=4), feedback),
+                online=online,
+            )
+            console.print("[bold] Feedback:")
+            for i, step in enumerate(verify["plan"]):
+                console.print(f"\tStep {i}: " + step["step"])
+                console.print("\t\tStatus: " + step["status"])
+                console.print("\t\tFeedback: " + step["feedback"])
 
             feedback_messages = []
             all_steps_approved = True
 
-            for step in verify['plan']:
-                if step['status'] == 'NOT_APPROVED':
+            for step in verify["plan"]:
+                if step["status"] == "NOT_APPROVED":
                     feedback_messages.append(f"{step['step']}: {step['feedback']}")
                     all_steps_approved = False
-            
+
             if feedback_messages:
-                feedback = ' | '.join(feedback_messages)  # Aggregate feedback messages
+                feedback = " | ".join(feedback_messages)  # Aggregate feedback messages
 
             PLAN_APPROVED = all_steps_approved
 
     execute_plan(plan)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app()
