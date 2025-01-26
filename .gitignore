@@ -4,3 +4,5 @@ env
 *.spec
 
 .env
+
+__pycache__
