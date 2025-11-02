@@ -72,7 +72,7 @@ Now you can run `helpme` directly from the terminal.
 Use `helpme` to generate and execute a plan based on a user-defined instruction:
 
 ```bash
-helpme "create a new directory named 'mydir'" --online
+helpme "create a new directory named 'mydir'" --provider gemini
 ```
 
 Options:
