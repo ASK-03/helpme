@@ -3,3 +3,8 @@ protobuf==5.28.3
 python-dotenv==1.0.1
 rich==13.9.3
 typer==0.12.5
+dotenv
+openai
+google-generativeai
+requests
+pyinstaller

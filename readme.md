@@ -2,7 +2,7 @@
 
 ## Description
 
-HelpMe is a powerful terminal-based CLI tool designed to help you accomplish user-defined Linux tasks by automatically generating and executing step-by-step commands. The tool uses advanced LLMs to intelligently generate, validate, and verify each command, ensuring accuracy, safety, and efficiency in completing tasks on the command line.
+HelpMe is a powerful terminal-based CLI tool designed to help you accomplish user-defined Linux tasks by automatically generating and executing step-by-step commands. The tool uses advanced AI Agents to intelligently generate, validate, and verify each command, ensuring accuracy, safety, and efficiency in completing tasks on the command line.
 
 [Demo Video](https://www.loom.com/share/a79bb41eb3f542ad91d388d41f27bb12?sid=51aa2840-b88a-4fc1-8c0a-09932dde9786)
 
@@ -17,7 +17,7 @@ HelpMe is a powerful terminal-based CLI tool designed to help you accomplish use
 
 - **Python**: 3.8 or higher
 - **Python Packages**: Install dependencies listed in `requirements.txt`
-- **API Access**: A Gemini API key for online execution
+- **API Access**: A Gemini/OpenAI API key for online execution or Ollama for offline execution.
 
 ## Getting Started
 
@@ -38,7 +38,7 @@ HelpMe is a powerful terminal-based CLI tool designed to help you accomplish use
      ```
 
 3. **Set Up API Key**
-   - Add your `GEMINI_API_KEY` in a `.env` file as shown in `.env.example`.
+   - Add your `GEMINI_API_KEY` or `OPENAI_API_KEY` in a `.env` file as shown in `.env.example`.
 
 ## Usage
 
@@ -49,7 +49,7 @@ To use the HelpMe CLI tool, you can either run the Python script directly or cre
 Run the tool with a user instruction. Here’s an example:
 
 ```bash
-python helpme.py "create a folder named 'hello'" --online
+python helpme.py "create a folder named 'hello'" --provider gemini/openai/deepseek/ollama
 ```
 
 ### Create an Executable (Optional)
@@ -58,7 +58,7 @@ For easier access, you can create a standalone executable with **PyInstaller**.
 
 1. Build the executable:
    ```bash
-   pyinstaller --onefile helpme.py
+   pyinstaller --onefile src/helpme.py
    ```
 2. Move the executable to your system path (e.g., `/usr/bin`) for global access:
    ```bash
@@ -78,25 +78,7 @@ helpme "create a new directory named 'mydir'" --online
 Options:
 
 - `instruction` (str): The instruction you want to turn into commands.
-- `--online` (optional): Use the Gemini LLM if you have internet access. If omitted, the tool defaults to using Ollama's Llama 3.1 model.
-
-### Sample Output
-
-For an instruction like "Create a folder named 'hello'", the tool might generate:
-
-```
-Generated Plan:
-    Step 1: Check if 'hello' exists.
-        Command: if [ -d hello ]; then echo 'Directory already exists'; else echo 'Directory does not exist'; fi
-    Step 2: Create 'hello' directory if it doesn't exist.
-        Command: if [ ! -d hello ]; then mkdir hello; else echo 'Directory already exists'; fi
-
-Feedback:
-    Step 1: Check if 'hello' exists.
-        Status: APPROVED
-    Step 2: Create 'hello' directory if it doesn't exist.
-        Status: APPROVED
-```
+- `--provider` (optional): Use the Gemini/OpenAI/Deepseek if you have internet access. If omitted, the tool defaults to using Ollama's Llama 3.1 model.
 
 ## Contributing
 
@@ -114,3 +96,7 @@ Please feel free to open issues for any bugs or feature requests.
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
+
+## Authors
+
+- [Abhishek Singh Kushwaha](https://ask03.vercel.app)

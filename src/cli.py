@@ -1,3 +1,4 @@
+import os
 import typer
 import time
 from rich.console import Console
@@ -29,11 +30,11 @@ def execute_interactive_plan(instruction: str, provider: str):
     validator = StepValidator(provider)
     shell = PersistentShell()
 
+    # Initialize state
     state: ExecutionState = {
         "completed": False,
         "previous_steps": [],
-        "current_status": "Initializing...",
-        "feedback_history": [],
+        "current_directory": os.getcwd(),
     }
 
     while not state["completed"]:
@@ -47,29 +48,53 @@ def execute_interactive_plan(instruction: str, provider: str):
 
         if validation["approved"]:
             command = validation.get("modification") or step.get("command")
-            print(command)
 
             if not command:
                 console.print("[bold red]Error: No valid command to execute!")
                 break
 
-            result = shell.execute(command)
+            result = shell.execute(command, timeout=step.get("timeout", 60))
 
             state["previous_steps"].append(
-                {"step": step["step"], "command": command, "execution_result": result}
+                {
+                    "step": step["step"],
+                    "timeout": step["timeout"],
+                    "command": command,
+                    "reason": step["reason"],
+                    "completed": result["success"],
+                    "output": result["output"],
+                    "feedback": (
+                        f"{validation.get('feedback', 'No feedback')}"
+                        + (
+                            f" | {validation['modification']}"
+                            if validation.get("modification")
+                            else ""
+                        )
+                    ),
+                }
             )
-            state["current_status"] = result["output"]
 
-            console.print(f"\n[bold green]✓ Step {len(state['previous_steps'])}:")
+            console.print(f"\n[bold green]✓ Step {step.get('step', len(state['previous_steps']))} Summary:")
             console.print(f"Command: [cyan]{command}[/]")
-            console.print(f"Output: [yellow]{result['output'] or 'No output'}[/]")
+            console.print(f"Reason: [magenta]{step.get('reason', 'No reason provided')}[/]")
+            console.print(f"Feedback: [yellow]{validation.get('feedback', 'No feedback')}[/]")
+            if validation.get("modification"):
+                console.print(f"Suggested Modification: [yellow]{validation['modification']}[/]")
+            console.print(f"\nOutput: \n[bold green]{result.get('output') or 'No output'}[/]")
             console.print(
-                f"Status: [{'green' if result['success'] else 'red'}]{'Success' if result['success'] else 'Failed'} (Code: {result['exit_code']})[/]"
+                f"Status: [{'green' if result.get('success') else 'red'}]{'Success' if result.get('success') else 'Failed'} (Code: {result.get('exit_code', 'N/A')})[/]"
             )
 
-            state["completed"] = step.get("completed", False) and result["success"]
+            state["completed"] = step.get("completed", False) and result.get("success", False)
         else:
-            state["feedback_history"].append(validation["feedback"])
+            state["previous_steps"].append({
+                "step": step["step"],
+                "command": "",  # Empty since step was rejected
+                "completed": False,
+                "feedback": validation["feedback"],
+                "reason": step["reason"],
+                "output": ""  # Empty since step was not executed
+            })
             console.print(f"\n[bold red]✗ Step Rejected:")
             console.print(f"Reason: [white]{validation['feedback']}[/]")
             console.print(

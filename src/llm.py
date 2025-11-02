@@ -49,7 +49,7 @@ class GeminiProvider(BaseProvider):
                 temperature=0,
                 top_p=1.0,
                 top_k=50,
-                max_output_tokens=2048,
+                max_output_tokens=4096,
                 response_mime_type=(
                     "application/json" if format == "json" else "text/plain"
                 ),

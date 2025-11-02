@@ -1,3 +1,4 @@
+import os
 from llm import LLMEngine
 from config import DEFAULT_MODELS, ExecutionState
 
@@ -11,21 +12,25 @@ class StepPlanner:
     def generate_next_step(self, instruction: str, state: ExecutionState) -> dict:
         previous_steps = self._format_all_previous_steps(state)
 
-        prompt = f"""You are an advanced shell command planner. Analyze the execution history and devise the next optimal step.
+        prompt = f"""
+You are an advanced shell command planner.
+You will be running in a loop with context (previous command, its output) of the previous steps,
+you should break the TASK into small steps and focus on completing the task one step at a time.
+Break the task down logically and ensure each step is purposeful and builds towards the final goal.
+The goal is to complete the TASK. Keep the quality of each step high.
+
+Analyze the task, execution history and devise the next optimal step.
 
 # TASK
 {instruction}
 
 # EXECUTION CONTEXT
 ## Current Environment
-- Completed Steps: {len(state['previous_steps'])}
-- Last Status: {state['current_status']}
+- OS: { os.name }
+- Current Directory: {state['current_directory']}
 
 ## Command History
 {previous_steps or 'No steps executed yet'}
-
-## Validation Feedback
-{self._format_feedback(state['feedback_history']) or 'No feedback'}
 
 # PLANNING REQUIREMENTS
 1. Check command history to avoid redundancy
@@ -38,24 +43,21 @@ class StepPlanner:
    - Store output using command substitution if required
    - Reference file contents from previous steps' outputs
 7. Provide only one step at a time.
+8. Donot give command that produces a very long output.
+9. If the task is to explain something, use echo command to output the explanation.
+10. Before suggesting download/install commands, check if software is already installed.
+
+Remember to strictly adhere to the JSON format below.
 
 # OUTPUT FORMAT
 {{
     "step": "Clear purpose linking to task and history",
+    "timeout": 60,  // estimated time in seconds to complete this step
     "command": "Precise shell command using existing context",
-    "reason": "Technical justification referencing specific previous steps/outputs. Example: 'Using Step 1's file contents to...'",
+    "reason": "Technical justification referencing specific previous steps/outputs and how will this commands output will be used in subsequent steps. Example: 'Using Step 1's file contents to...'",
     "completed": true/false  // Only true if ALL task requirements are met
-}}
-
-Example for file reading:
-Task: "Read config.txt and give its summary"
-Step 1: {{
-    "command": "cat config.txt",
-    "reason": "Read config file contents as requested",
-}}
-Step 2: {{
-    "command": "echo 'SUMMARY OF THE FILE *config.txt*'",
-    "reason": "Got the content of *config.txt* from previous step's output."
+    "feedback": []  // feedback will be provided by validator in next phase
+    "output": ""  // output will be filled after execution
 }}
 
 Generate the next step JSON:"""
@@ -78,10 +80,12 @@ Generate the next step JSON:"""
         for i, step in enumerate(state["previous_steps"], 1):
             step_list.append(
                 f"Step {i}:\n"
-                f"  Command: {step.get('command', 'N/A')}\n"
-                f"  Output: {step.get('execution_result', {}).get('output', 'No output')}\n"
-                f"  Status: {'Success' if step.get('execution_result', {}).get('success') else 'Failed'}\n"
-                f"  Reason: {step.get('reason', 'No reason provided')}"
+                f"\tstep: {step.get('step', 'N/A')}\n"
+                f"\tcommand: {step.get('command', 'N/A')}\n"
+                f"\toutput: {step.get('output', 'No Output')}\n"
+                f"\tstatus: {'Success' if step.get('completed', False) else 'Failed'}\n"
+                f"\treason: {step.get('reason', 'No reason provided')}\n"
+                f"\tfeedback: {step.get('feedback', 'No feedback provided')}\n"
             )
         return "\n\n".join(step_list)
 
