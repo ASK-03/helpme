@@ -5,7 +5,7 @@
 HelpMe is a powerful terminal-based CLI tool designed to help you accomplish user-defined Linux tasks by automatically generating and executing step-by-step commands. The tool uses advanced AI Agents to intelligently generate, validate, and verify each command, ensuring accuracy, safety, and efficiency in completing tasks on the command line.
 
 - [Demo Video v1](https://www.loom.com/share/a79bb41eb3f542ad91d388d41f27bb12?sid=51aa2840-b88a-4fc1-8c0a-09932dde9786)
-- [Demo Video v2 Coming Soon]()
+- [Demo Video v2](https://drive.google.com/file/d/1jtbwRMCnVWzH4I1aHI2AJHSxyU9lEHyH/view?usp=sharing)
 
 ## Features
 
