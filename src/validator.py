@@ -34,8 +34,8 @@ Execution Context:
 
 Output JSON with:
 - "approved": Boolean
-- "feedback": Technical assessment
-- "modification": Suggested command modification
+- "feedback": Technical assessment of the command, if any modifications suggested add here
+- "modification": modified command if any (optional)
 """
 
         response = self.llm.generate(
