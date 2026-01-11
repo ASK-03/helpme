@@ -1,49 +1,25 @@
 import os
 import json
 import re
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Literal
-import google.generativeai as genai
-import openai
 import requests
 import ollama
+import google.generativeai as genai
+import openai
+from typing import Dict, Any, Literal
 from google.generativeai import GenerationConfig
 
+from src.core.interfaces import LLMProvider
+from src.core.exceptions import LLMConfigurationError, LLMResponseError
+from src.config.settings import get_api_key
 
-class LLMConfigurationError(Exception):
-    """Exception raised for configuration errors in LLM providers"""
-
-    pass
-
-
-class LLMResponseError(Exception):
-    """Exception raised for API response errors"""
-
-    pass
-
-
-class BaseProvider(ABC):
-    @abstractmethod
-    def generate(
-        self,
-        prompt: str,
-        model: str,
-        format: Literal["text", "json"] = "text",
-        **kwargs,
-    ) -> Dict[str, Any]:
-        pass
-
-
-class GeminiProvider(BaseProvider):
+class GeminiProvider(LLMProvider):
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = get_api_key("gemini")
         if not api_key:
             raise LLMConfigurationError("GEMINI_API_KEY not found in environment")
         genai.configure(api_key=api_key)
 
-    def generate(
-        self, prompt: str, model: str, format: str = "text", **kwargs
-    ) -> Dict[str, Any]:
+    def generate(self, prompt: str, model: str, format: str = "text", **kwargs) -> Dict[str, Any]:
         try:
             config = GenerationConfig(
                 temperature=0,
@@ -54,23 +30,21 @@ class GeminiProvider(BaseProvider):
                     "application/json" if format == "json" else "text/plain"
                 ),
             )
-            model = genai.GenerativeModel(model, generation_config=config)
-            response = model.generate_content(prompt)
+            model_instance = genai.GenerativeModel(model, generation_config=config)
+            response = model_instance.generate_content(prompt)
             return {"content": response.text, "status": "success", "format": format}
         except Exception as e:
             raise LLMResponseError(f"Gemini API error: {str(e)}")
 
 
-class OpenAIProvider(BaseProvider):
+class OpenAIProvider(LLMProvider):
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = get_api_key("openai")
         if not api_key:
             raise LLMConfigurationError("OPENAI_API_KEY not found in environment")
         self.client = openai.OpenAI(api_key=api_key)
 
-    def generate(
-        self, prompt: str, model: str, format: str = "text", **kwargs
-    ) -> Dict[str, Any]:
+    def generate(self, prompt: str, model: str, format: str = "text", **kwargs) -> Dict[str, Any]:
         try:
             response_format = (
                 {"type": "json_object"} if format == "json" else {"type": "text"}
@@ -90,16 +64,14 @@ class OpenAIProvider(BaseProvider):
             raise LLMResponseError(f"OpenAI API error: {str(e)}")
 
 
-class DeepSeekProvider(BaseProvider):
+class DeepSeekProvider(LLMProvider):
     def __init__(self):
-        self.api_key = os.getenv("DEEPSEEK_API_KEY")
+        self.api_key = get_api_key("deepseek")
         if not self.api_key:
             raise LLMConfigurationError("DEEPSEEK_API_KEY not found in environment")
         self.base_url = "https://api.deepseek.com/v1/chat/completions"
 
-    def generate(
-        self, prompt: str, model: str, format: str = "text", **kwargs
-    ) -> Dict[str, Any]:
+    def generate(self, prompt: str, model: str, format: str = "text", **kwargs) -> Dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -124,10 +96,8 @@ class DeepSeekProvider(BaseProvider):
             raise LLMResponseError(f"DeepSeek API error: {str(e)}")
 
 
-class OllamaProvider(BaseProvider):
-    def generate(
-        self, prompt: str, model: str, format: str = "text", **kwargs
-    ) -> Dict[str, Any]:
+class OllamaProvider(LLMProvider):
+    def generate(self, prompt: str, model: str, format: str = "text", **kwargs) -> Dict[str, Any]:
         try:
             response = ollama.generate(
                 model=model,
@@ -161,6 +131,7 @@ class OllamaProvider(BaseProvider):
             return json_match.group(1).strip()
         return ''
 
+
 class LLMEngine:
     _providers = {
         "ollama": OllamaProvider,
@@ -172,13 +143,14 @@ class LLMEngine:
     def __init__(self):
         self.provider_map = {}
 
-    def get_provider(self, provider_name: str) -> BaseProvider:
+    def get_provider(self, provider_name: str) -> LLMProvider:
         provider_name = provider_name.lower()
         if provider_name not in self._providers:
             raise ValueError(f"Provider {provider_name} not registered")
         if provider_name not in self.provider_map:
             self.provider_map[provider_name] = self._providers[provider_name]()
         return self.provider_map[provider_name]
+
 
     def generate(
         self,
@@ -192,7 +164,11 @@ class LLMEngine:
         response = provider_instance.generate(prompt, model, format, **kwargs)
         if format == "json" and isinstance(response["content"], str):
             try:
-                response["content"] = json.loads(response["content"])
+                # Basic cleanup before parsing if it's a string
+                content = response["content"]
+                if "```json" in content:
+                    content = content.replace("```json", "").replace("```", "")
+                response["content"] = json.loads(content)
             except json.JSONDecodeError:
                 raise LLMResponseError("Failed to parse JSON response")
         return response
