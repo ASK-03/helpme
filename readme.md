@@ -50,7 +50,7 @@ To use the HelpMe CLI tool, you can either run the Python script directly or cre
 Run the tool with a user instruction. Here’s an example:
 
 ```bash
-python helpme.py "create a folder named 'hello'" --provider gemini/openai/deepseek/ollama
+python -m src.cli "create a folder named 'hello'" --provider gemini/openai/deepseek/ollama
 ```
 
 ### Create an Executable (Optional)
@@ -59,7 +59,7 @@ For easier access, you can create a standalone executable with **PyInstaller**.
 
 1. Build the executable:
    ```bash
-   pyinstaller --onefile src/helpme.py
+   pyinstaller --onefile src/cli.py --name helpme
    ```
 2. Move the executable to your system path (e.g., `/usr/bin`) for global access:
    ```bash
@@ -75,6 +75,16 @@ Use `helpme` to generate and execute a plan based on a user-defined instruction:
 ```bash
 helpme "create a new directory named 'mydir'" --provider gemini
 ```
+
+## Architecture
+
+Refactored into a modular architecture:
+- **core**: Interfaces, Context, Exceptions
+- **services**: Business logic (Planner, Validator, Executor)
+- **providers**: LLM integrations (Gemini, OpenAI, etc.)
+- **ui**: Console UI
+- **config**: Configuration and constants
+- **common**: Shared utilities (Prompts)
 
 Options:
 
