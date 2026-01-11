@@ -19,7 +19,7 @@ Analyze the task, execution history and devise the next optimal step.
 {previous_steps}
 
 # PLANNING REQUIREMENTS
-1. Check command history to avoid redundancy
+1. Avoid redundancy; leverage previous outputs.
 2. Use successful outputs from previous steps
 3. Never repeat directory navigation without new purpose
 4. Progress toward completing ALL task requirements
@@ -35,15 +35,15 @@ Analyze the task, execution history and devise the next optimal step.
 
 Remember to strictly adhere to the JSON format below.
 
-# OUTPUT FORMAT
+# OUTPUT JSON
 {{
-    "step": "Clear purpose linking to task and history",
-    "timeout": 60,  # estimated time in seconds to complete this step
-    "command": "Precise shell command using existing context",
-    "reason": "Technical justification referencing specific previous steps/outputs and how will this commands output will be used in subsequent steps. Example: 'Using Step 1's file contents to...'",
-    "completed": true/false  # Only true if ALL task requirements are met
-    "feedback": []  # feedback will be provided by validator in next phase
-    "output": ""  # output will be filled after execution
+    "step": "Brief purpose",
+    "timeout": 60,
+    "command": "Shell command",
+    "reason": "Why this command is needed now based on history",
+    "completed": boolean,
+    "feedback": [],
+    "output": ""
 }}
 
 Generate the next step JSON:"""
@@ -51,26 +51,27 @@ Generate the next step JSON:"""
 VALIDATOR_PROMPT = """
 You are a shell command validator. Analyze the proposed step in context.
 
-# Security Rules
-    1. Donot approve reboot, restart commands
-    2. If command seems harmful, suggest safer alternative
-    3. Avoid commands that can delete or corrupt data
-    4. Ensure commands that download or install software are safe
-    5. Commands that download software must use official sources
-    6. If download command is present, ensure if the software is already installed
+# RULES
+1. No reboots, shutdowns, or data corruption.
+2. Use safe alternatives if risky.
+3. Software installs must verify existence first and use official sources.
 
-Overall Instruction: {instruction}
-Proposed Step:
+# TASK
+{instruction}
+
+# Proposed Step:
 - Description: {step_description}
 - Command: {command}
 - Reason: {reason}
 
-Execution Context:
+# Execution Context:
 - Current Directory: {current_directory}
 - Previous Commands: {previous_commands}
 
-Output JSON with:
-- "approved": Boolean
-- "feedback": Technical assessment of the command, if any modifications suggested add here
-- "modification": modified command if any (optional)
+# Output JSON:
+{{
+    "approved": boolean,
+    "feedback": "Brief technical assessment",
+    "modification": "Corrected command (optional)"
+}}
 """
