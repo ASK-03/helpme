@@ -108,10 +108,12 @@ class OllamaProvider(LLMProvider):
             content = response["response"].strip()
             if model == 'deepseek-r1':
                 content = self._format_deepseek_output(content)
-
-            print("OLLAMA RESPONSE FROM DEEPSEEK-R1:1.5B -> ", content)
+                
             if format == "json":
-                content = json.loads(content)
+                match = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
+                if match:
+                    content = match.group(1)
+                content = json.loads(content.strip())
             return {"content": content, "status": "success", "format": format}
         except Exception as e:
             raise LLMResponseError(f"Ollama error: {str(e)}")
